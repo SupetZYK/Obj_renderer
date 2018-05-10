@@ -151,7 +151,7 @@ public:
    * @return the pose of the obj with respect to the current camera view, the camera coordinate is standard opencv
    * camera coordinate(z axis points to obj
    */
-  cv::Matx44d
+  cv::Matx44f
   Rt_obj();
   /**
    * @return the total number of templates that will be computed
@@ -171,6 +171,13 @@ public:
   float radius_min_, radius_max_, radius_step_, radius_;
   /** bool flag for radius_step type, indicating whether it is a proportion decline */
   bool absolute_radius_step;
+  /**
+   * Add 18-5-10, control the elevation range,
+   * first a up direction must be set, this has to be adjusted according to different CADs
+   */
+  float ele_range;//0~180 degree, 180 by default
+  cv::Vec3f updir; // the up direction
+  bool isValidRange();
 private:
   /**
    * @param T the translation vector

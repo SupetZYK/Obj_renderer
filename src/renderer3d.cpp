@@ -140,7 +140,7 @@ Renderer3d::set_parameters(size_t width, size_t height, double focal_length_x, d
     glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
     glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
     glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
-    //glEnable(GL_LIGHT1);
+    glEnable(GL_LIGHT1);
     /**material setting**/
 //    glLightModeli(GL_LIGHT_MODEL_AMBIENT, GL_TRUE);
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT,LightAmbient);

@@ -15,9 +15,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_executable(project_render_test project_render_test.cpp)
 target_link_libraries(project_render_test ${OpenCV_LIBRARIES} ${PROJECT_NAME}_3d)
 
-#add_executable(train_test train_test.cpp)
-#target_link_libraries(train_test ${OpenCV_LIBRARIES})
-
 add_executable(view_generate view_generate.cpp)
 target_link_libraries(view_generate ${OpenCV_LIBRARIES} ${PROJECT_NAME}_3d)
 
@@ -25,12 +22,22 @@ add_executable(simple_opengl_test simple_opengl_test.cpp)
 target_link_libraries(simple_opengl_test ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${ASSIMP_LIBRARIES})
 
 ######################
+# linemod trainner
+######################
+set(lmd_dev_lib /home/zyk/git/build/build-linemod_dev-Desktop-Debug/liblmd_dev.so)
+set(lmd_dev_include_dir /home/zyk/git/linemod_dev/include)
+include_directories(${lmd_dev_include_dir})
+add_executable(lmd_trainer linemod_trainer.cpp)
+target_link_libraries(lmd_trainer ${OpenCV_LIBRARIES} ${lmd_dev_lib} ${PROJECT_NAME}_3d)
+
+
+######################
 # ppf trainner, need pcl support and zyk_ppf
 ######################
-find_package(PCL 1.8 REQUIRED)
-INCLUDE_DIRECTORIES(${PCL_INCLUDE_DIRS})
-set(zyk_ppf_lib /home/zyk/git/qt/zyk_ppf/build-src-Desktop-Release/libzyk_ppf.so)
-set(zyk_ppf_include_dir /home/zyk/git/zyk_ppf/src)
-include_directories(${zyk_ppf_include_dir})
-add_executable(view_based_ppf_trainner view_based_ppf_trainner.cpp)
-target_link_libraries(view_based_ppf_trainner ${OpenCV_LIBRARIES} ${PROJECT_NAME}_3d ${PCL_LIBRARIES} ${zyk_ppf_lib})
+#find_package(PCL 1.8 REQUIRED)
+#INCLUDE_DIRECTORIES(${PCL_INCLUDE_DIRS})
+#set(zyk_ppf_lib /home/zyk/git/qt/zyk_ppf/build-src-Desktop-Release/libzyk_ppf.so)
+#set(zyk_ppf_include_dir /home/zyk/git/zyk_ppf/src)
+#include_directories(${zyk_ppf_include_dir})
+#add_executable(view_based_ppf_trainner view_based_ppf_trainner.cpp)
+#target_link_libraries(view_based_ppf_trainner ${OpenCV_LIBRARIES} ${PROJECT_NAME}_3d ${PCL_LIBRARIES} ${zyk_ppf_lib})

@@ -52,7 +52,9 @@ RendererIterator::RendererIterator(Renderer *renderer, size_t n_points)
       radius_max_(0.8),
       radius_step_(0.2),
       radius_(radius_min_),
-      absolute_radius_step(true)
+      absolute_radius_step(true),
+      ele_range(180),
+      updir(cv::Vec3f(0,0,1.0))
 {
 }
 
@@ -225,7 +227,7 @@ RendererIterator::T() const
  * @return the pose of the obj with respect to the current camera view, the camera coordinate is standard opencv
  * camera coordinate(z axis points to obj
  */
-cv::Matx44d RendererIterator::Rt_obj()
+cv::Matx44f RendererIterator::Rt_obj()
 {
     cv::Vec3d T,t, up;
     view_params(T, up);
@@ -242,27 +244,49 @@ cv::Matx44d RendererIterator::Rt_obj()
     normalize_vector(up(0), up(1), up(2));
 
     // the opencv camera pose relative to obj
-    cv::Mat Rt_eye = (cv::Mat_<double>(4, 4) <<
+    cv::Mat Rt_eye = (cv::Mat_<float>(4, 4) <<
                       y(0), -up(0), -t(0), T(0),
                       y(1), -up(1), -t(1), T(1),
                       y(2), -up(2), -t(2) ,T(2),
                      0,0,0,1
                       );
     cv::Mat Rt_obj=Rt_eye.inv();
-    cv::Matx44d Rt_full = Rt_obj;
+    cv::Matx44f Rt_full = Rt_obj;
     return Rt_full;
 }
 
 /**
- * @return the total number of templates that will be computed
+ * @return the total number of templates that will be computed,
+ * 18-5-10 by zyk
+ * it is approximated, not exactly
  */
 size_t
 RendererIterator::n_templates() const
 {
+    int res=0;
     if(absolute_radius_step)
-        return ((angle_max_ - angle_min_) / angle_step_ + 1) * n_points_ * ((radius_max_ - radius_min_) / radius_step_ + 1);
-    return ((angle_max_ - angle_min_) / angle_step_ + 1) * n_points_ * (log(radius_max_/ radius_min_) / log(radius_step_ )+1);
+        res = ((angle_max_ - angle_min_) / angle_step_ + 1) * n_points_ * ((radius_max_ - radius_min_) / radius_step_ + 1);
+    else
+      res = ((angle_max_ - angle_min_) / angle_step_ + 1) * n_points_ * (log(radius_max_/ radius_min_) / log(radius_step_ )+1);
+    return ele_range/180 * res;
+}
 
+bool RendererIterator::isValidRange()
+{
+//  float angle_rad = angle_ * CV_PI / 180.;
+
+  // from http://www.xsi-blog.com/archives/115
+  // compute the Point(x, y ,z) on the sphere based on index_ and radius_ using Golden Spiral technique
+  static float inc = CV_PI * (3 - sqrt(5));
+  static float off = 2.0f / float(n_points_);
+  float y = index_ * off - 1.0f + (off / 2.0f);
+  float r = sqrt(1.0f - y * y);
+  float phi = index_ * inc;
+  float x = std::cos(phi) * r;
+  float z = std::sin(phi) * r;
+  if(std::acos(cv::Vec3f(x,y,z).dot(updir))>ele_range*CV_PI/180)
+    return false;
+  return true;
 }
 
 /**
@@ -284,7 +308,6 @@ RendererIterator::view_params(cv::Vec3d &T, cv::Vec3d &up) const
   float phi = index_ * inc;
   float x = std::cos(phi) * r;
   float z = std::sin(phi) * r;
-
   float lat = std::acos(z), lon;
   if ((fabs(std::sin(lat)) < 1e-5) || (fabs(y / std::sin(lat)) > 1))
     lon = 0;

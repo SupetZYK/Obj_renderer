@@ -220,10 +220,10 @@ Model::recursive_render(const struct aiScene *sc, const aiNode* nd) const
     else
       glEnable(GL_LIGHTING);
 
-//    if (mesh->mColors[0] != NULL)
-//      glEnable (GL_COLOR_MATERIAL);
-//    else
-//      glDisable(GL_COLOR_MATERIAL);
+    if (mesh->mColors[0] != NULL)
+      glEnable (GL_COLOR_MATERIAL);
+    else
+      glDisable(GL_COLOR_MATERIAL);
 
     for (t = 0; t < mesh->mNumFaces; ++t)
     {
@@ -251,9 +251,9 @@ Model::recursive_render(const struct aiScene *sc, const aiNode* nd) const
       for (i = 0; i < face->mNumIndices; i++)
       {
         int index = face->mIndices[i];
-//        if (mesh->mColors[0] != NULL)
-//          Color4f(&mesh->mColors[0][index]);
-//        else
+        if (mesh->mColors[0] != NULL)
+          Color4f(&mesh->mColors[0][index]);
+        else
           glColor3f((mesh->mNormals[index].x+1)/2.0,(mesh->mNormals[index].y+1)/2.0,(mesh->mNormals[index].z+1)/2.0);
         if (mesh->mNormals != NULL)
           glNormal3fv(&mesh->mNormals[index].x);

@@ -102,18 +102,45 @@ static void writeLinemod(const cv::Ptr<cv::linemod::Detector>& detector, const s
   fs << "]"; // classes
 }
 
-bool visualize_=false;
+static void writeInfo(const cv::Mat& K, std::vector<cv::Mat>& rt_, const std::string& filename)
+{
+  cv::FileStorage fs(filename, cv::FileStorage::WRITE);
+  fs<<"K"<<K;
+  fs<<"num"<<static_cast<int>(rt_.size());
+  fs<<"rt_"<<"[";
+  for(int i=0;i<rt_.size();++i)
+  {
+    fs<<rt_[i];
+  }
+  fs<<"]";
+}
 
+static void readInfo(cv::Mat& K, std::vector<cv::Mat>& rt_, const std::string& filename)
+{
+  cv::FileStorage fs(filename, cv::FileStorage::READ);
+  fs["K"]>>K;
+  int num=0;
+  fs["num"]>>num;
+  cv::FileNode fn=fs["rt_"];
+  for(int i=0;i<num;++i)
+  {
+    cv::Mat rt;
+    fn[i]>>rt;
+    rt_.push_back(rt);
+  }
+}
+bool visualize_=false;
+bool grayFlag=true;
 int main(int argc, char **argv) {
   // Define the display
   size_t width = 640, height = 480;
   //render parameters
-  size_t renderer_n_points=300;
+  size_t renderer_n_points=200;
   float render_near=0.1, render_far=2000.0;
   float renderer_angle_step = 15;
-  float renderer_radius_min = 500;
+  float renderer_radius_min = 300;
   float renderer_radius_max = 1200;
-  float renderer_radius_step = 1.1;
+  float renderer_radius_step = 1.2;
   float renderer_focal_length_x=572.41140;
   float renderer_focal_length_y=573.57043;
 
@@ -153,41 +180,48 @@ int main(int argc, char **argv) {
   renderer_iterator.radius_max_ = renderer_radius_max;
   renderer_iterator.radius_step_ = renderer_radius_step;
   renderer_iterator.absolute_radius_step=false;
+  //set ele range
+  renderer_iterator.updir=cv::Vec3f(0,0,-1);
+  renderer_iterator.ele_range=90;
   cv::Mat image, depth, mask;
-  cv::Matx33d R;
-  cv::Vec3d T;
-  cv::Matx33f K;
-  
-  for (size_t i = 0; !renderer_iterator.isDone(); ++i, ++renderer_iterator)
+//  cv::Matx33d R;
+//  cv::Vec3d T;
+  cv::Mat K;
+  std::vector<cv::Mat> rt_;
+  for (size_t i = 0; !renderer_iterator.isDone(); ++renderer_iterator)
   {
+    if(!renderer_iterator.isValidRange())
+      continue;
     std::stringstream status;
-    status << "Loading images " << (i+1) << "/"
+    status << "Loading images " << (++i) << "/"
         << renderer_iterator.n_templates();
     std::cout << status.str();
 
     cv::Rect rect;
     renderer_iterator.render(image, depth, mask, rect);
 
-    R = renderer_iterator.R_obj();
-    T = renderer_iterator.T();
-    float distance = renderer_iterator.D_obj() - float(depth.at<ushort>(depth.rows/2.0f, depth.cols/2.0f));
-    K = cv::Matx33f(renderer_focal_length_x, 0.0f, float(rect.width)/2.0f, 0.0f, renderer_focal_length_y, float(rect.height)/2.0f, 0.0f, 0.0f, 1.0f);
-
+//    R = renderer_iterator.R_obj();
+//    T = renderer_iterator.T();
+    cv::Matx44f rt = renderer_iterator.Rt_obj();
+//    float distance = renderer_iterator.D_obj() - float(depth.at<ushort>(depth.rows/2.0f, depth.cols/2.0f));
+    K = cv::Mat(cv::Matx33f(renderer_focal_length_x, 0.0f, float(rect.width)/2.0f, 0.0f, renderer_focal_length_y, float(rect.height)/2.0f, 0.0f, 0.0f, 1.0f));
+    if(grayFlag)
+      cv::cvtColor(image,image,CV_RGB2GRAY);
     std::vector<cv::Mat> sources(2);
     sources[0] = image;
     sources[1] = depth;
     //std::cout<<depth<<std::endl;
   //#if LINEMOD_VIZ_IMG
     // Display the rendered image
-//    if (visualize_)
-//    {
-//      cv::namedWindow("Rendering");
-//      if (!image.empty()) {
-//        cv::imshow("Rendering", image);
-//        //cv::imshow("mask",mask);
-//        cv::waitKey(0);
-//      }
-//    }
+    if (visualize_)
+    {
+      cv::namedWindow("Rendering");
+      if (!image.empty()) {
+        cv::imshow("Rendering", image);
+        cv::imshow("mask",mask);
+        cv::waitKey(1);
+      }
+    }
   //#endif
 
     int template_in = detector_ptr->addTemplate(sources, "object1", mask);
@@ -198,7 +232,7 @@ int main(int argc, char **argv) {
         std::cout << '\b';
       continue;
     }
-
+    rt_.push_back(cv::Mat(rt));
     // Also store the pose of each template
     // Rs_->push_back(cv::Mat(R));
     // Ts_->push_back(cv::Mat(T));
@@ -210,7 +244,12 @@ int main(int argc, char **argv) {
       std::cout << '\b';
   }
   //detector_ptr->writeClasses(file_name + std::string("_templates.yaml"));
-    writeLinemod(detector_ptr,file_name + std::string("_templates.yaml"));
+  std::string save_name=file_name;
+  if(grayFlag)
+    save_name+="_gray";
+  writeLinemod(detector_ptr,save_name + std::string("_templates.yaml"));
+  //store info
+  writeInfo(K,rt_,save_name+std::string("_info.yaml"));
 
 
 

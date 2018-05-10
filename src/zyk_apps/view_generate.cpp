@@ -17,9 +17,9 @@ int main(int argc, char **argv) {
   // Define the display
   size_t width = 640, height = 480;
   //render parameters
-  size_t renderer_n_points=168;
+  size_t renderer_n_points=200;
   float render_near=0.1, render_far=2000.0;
-  float renderer_angle_step = 69;
+  float renderer_angle_step = 20;
   float renderer_radius_min = 500;
   float renderer_radius_max = 500;
   float renderer_radius_step = 1.1;
@@ -54,27 +54,30 @@ int main(int argc, char **argv) {
 
   RendererIterator renderer_iterator = RendererIterator(&renderer, renderer_n_points);
   //set the RendererIterator parameters
-  renderer_iterator.angle_min_=0;
-  renderer_iterator.angle_max_=50;
+  renderer_iterator.angle_min_=-170;
+  renderer_iterator.angle_max_=180;
   renderer_iterator.angle_step_ = renderer_angle_step;
   renderer_iterator.radius_ = renderer_radius_min;
   renderer_iterator.radius_min_ = renderer_radius_min;
   renderer_iterator.radius_max_ = renderer_radius_max;
   renderer_iterator.radius_step_ = renderer_radius_step;
   renderer_iterator.absolute_radius_step=false;
+  //set ele range
+  renderer_iterator.updir=cv::Vec3f(0,0,-1);
+  renderer_iterator.ele_range=90;
   cv::Mat image, depth, mask, image2,depth2,mask2;
 
-  cv::Matx33d R;
-  cv::Vec3d T;
+//  cv::Matx33d R;
+//  cv::Vec3d T;
   cv::Matx33f K;
-  
-  for (size_t i = 0; !renderer_iterator.isDone(); ++i, ++renderer_iterator)
+  for (size_t i = 0; !renderer_iterator.isDone(); ++renderer_iterator)
   {
+    if(!renderer_iterator.isValidRange())
+      continue;
     std::stringstream status;
-    status << "Loading images " << (i+1) << "/"
+    status << "Loading images " << (++i) << "/"
         << renderer_iterator.n_templates();
     std::cout << status.str();
-
     cv::Rect rect;
     rect.width=width;
     rect.height=height;
@@ -108,7 +111,7 @@ int main(int argc, char **argv) {
         cv::imshow("mask",mask);
         cv::imshow("reImage",image2);
         cv::imshow("reMask",mask2);
-        cv::waitKey(0);
+        cv::waitKey(1);
       }
     }
   //#endif
