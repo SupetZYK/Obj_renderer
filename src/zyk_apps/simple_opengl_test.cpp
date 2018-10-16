@@ -207,9 +207,7 @@ void recursive_render (const  aiScene *sc, const  aiNode* nd)
 	/* draw all meshes assigned to this node */
 	for (; n < nd->mNumMeshes; ++n) {
         const  aiMesh* mesh = scene->mMeshes[nd->mMeshes[n]];
-
-//        apply_material(sc->mMaterials[mesh->mMaterialIndex]);
-
+        apply_material(sc->mMaterials[mesh->mMaterialIndex]);
 		if(mesh->mNormals == NULL) {
 			glDisable(GL_LIGHTING);
 		} else {
@@ -217,9 +215,8 @@ void recursive_render (const  aiScene *sc, const  aiNode* nd)
 		}
 
 		for (t = 0; t < mesh->mNumFaces; ++t) {
-            const  aiFace* face = &mesh->mFaces[t];
+      const  aiFace* face = &mesh->mFaces[t];
 			GLenum face_mode;
-
 			switch(face->mNumIndices) {
 				case 1: face_mode = GL_POINTS; break;
 				case 2: face_mode = GL_LINES; break;
@@ -228,16 +225,35 @@ void recursive_render (const  aiScene *sc, const  aiNode* nd)
 			}
 
 			glBegin(face_mode);
+//      if(mesh->mNormals != NULL)
+//        glNormal3fv(&mesh->mNormals[face->mIndices[2]].x);
+      if(face_mode == GL_TRIANGLES && mesh->mNormals != NULL)
+      {
+        // USE FLAT SHADED
+        aiVector3D & p1 = mesh->mVertices[face->mIndices[0]];
+        aiVector3D & p2 = mesh->mVertices[face->mIndices[1]];
+        aiVector3D & p3 = mesh->mVertices[face->mIndices[2]];
+        float x1=p3[0]-p1[0];
+        float y1=p3[1]-p1[1];
+        float z1=p3[2]-p1[2];
+        float x2=p2[0]-p1[0];
+        float y2=p2[1]-p1[1];
+        float z2=p2[2]-p1[2];
 
+        aiVector3D normal(y1*z2-y2*z1,x2*z1-x1*z2,x1*y2-x2*y1);
+        normal= -normal.Normalize();
+        glNormal3fv(&normal.x);
+      }
 			for(i = 0; i < face->mNumIndices; i++) {
 				int index = face->mIndices[i];
         if(mesh->mColors[0] != NULL)
           glColor4fv((GLfloat*)&mesh->mColors[0][index]);
-        else
-        glColor3f((mesh->mNormals[index].x+1)/2.0,(mesh->mNormals[index].y+1)/2.0,(mesh->mNormals[index].z+1)/2.0);
-				if(mesh->mNormals != NULL)
-					glNormal3fv(&mesh->mNormals[index].x);
-				glVertex3fv(&mesh->mVertices[index].x);
+        if(face_mode == GL_POLYGON && mesh->mNormals != NULL)
+        {
+          //USE SMOOTH SHADED
+          glNormal3fv(&mesh->mNormals[index].x);
+        }
+        glVertex3fv(&mesh->mVertices[index].x);
 			}
 
 			glEnd();
@@ -286,9 +302,8 @@ void DisplayFunc() {
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-    gluLookAt(0.f,0.f,3,0.f,0.f,0.f,0.f,1.f,0.f);
+  gluLookAt(0.f,0.f,3,0.f,0.f,0.f,0.f,1.f,0.f);
 //        GLfloat LightPosition[]= { 0.0f, 0.0f, -1.0f, 0.0f };
-
 //        glLightfv(GL_LIGHT0, GL_POSITION, LightPosition);
 //        glEnable(GL_LIGHT0);
 //    glTranslatef(xpan, ypan, -sdepth);
@@ -450,16 +465,16 @@ void InitGL() {
     /**light setting**/
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);    /* Uses default lighting parameters */
-    GLfloat LightAmbient[]= { 0.3f, 0.3f, 0.3f, 1.0f };
-    GLfloat LightDiffuse[]= { 1.0f, 1.0f, 1.0f, 1.0f };
-    GLfloat LightPosition[]= { 0.0f, 0.0f, -100.0f, 0.0f };
-    glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
-    glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
-    glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
-    glEnable(GL_LIGHT1);
+//    GLfloat LightAmbient[]= { 0.4f, 0.4f, 0.4f, 1.0f };
+//    GLfloat LightDiffuse[]= { 0.6f, 0.6f, 0.6f, 1.0f };
+//    GLfloat LightPosition[]= { 0.0f, 0.0f, -1000.0f, 0.0f };
+//    glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
+//    glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
+//    glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
+//    glEnable(GL_LIGHT1);
     /**material setting**/
 //    glLightModeli(GL_LIGHT_MODEL_AMBIENT, GL_TRUE);
-    glLightModelfv(GL_LIGHT_MODEL_AMBIENT,LightAmbient);
+//    glLightModelfv(GL_LIGHT_MODEL_AMBIENT,LightAmbient);
     glEnable(GL_COLOR_MATERIAL);
     glColorMaterial(GL_FRONT_AND_BACK,GL_AMBIENT_AND_DIFFUSE);
     /**Others**/
@@ -474,7 +489,7 @@ int main(int argc, char **argv)
 {
      aiLogStream stream;
 
-	glutInit(&argc, argv);
+    glutInit(&argc, argv);
     InitGL();
     InitMenu();
 //	glutDisplayFunc(display);

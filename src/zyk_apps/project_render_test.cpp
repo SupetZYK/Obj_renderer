@@ -10,9 +10,8 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/calib3d.hpp>
-#include <object_recognition_renderer/utils.h>
-#include <object_recognition_renderer/renderer3d.h>
-
+#include <object_renderer/utils.h>
+#include <object_renderer/renderer3d.h>
 #include <opencv2/highgui/highgui.hpp>
 
 int main(int argc, char **argv) {
@@ -20,7 +19,7 @@ int main(int argc, char **argv) {
     size_t width = 640, height = 480;
     //render parameters
 //    size_t renderer_n_points=150;
-    float render_near=0.1, render_far=2000.0;
+//    float render_near=0.1, render_far=2000.0;
 //    float renderer_angle_step = 10;
 //    float renderer_radius_min = 0.6;
 //    float renderer_radius_max = 1.1;
@@ -45,10 +44,10 @@ int main(int argc, char **argv) {
     rect.width=width;
     rect.height=height;
     Renderer3d renderer = Renderer3d(file_name);
-    renderer.set_parameters(width, height, renderer_focal_length_x, renderer_focal_length_y, px, py, render_near, render_far);
+    renderer.set_parameters(width, height, renderer_focal_length_x, renderer_focal_length_y, px, py);
     cv::Mat image, depth, mask;
 
-    //cv::Matx33f K;
+    // cv::Matx33f K;
     // accv lamp 0 rt
 //    cv::Mat Rt=(cv::Mat_<float>(4,4) << -0.00145487,-0.993196,0.116445,98.7207,
 //                                0.89669, 0.0502498, 0.439798 ,-120.88,
@@ -65,8 +64,9 @@ int main(int argc, char **argv) {
 //                0,0,0,1);
 
     cv::Mat Rt=cv::Mat::eye(4,4,CV_32F);
-    Rt.at<float>(2,3)=200;
-//    Rt.at<float>(0,3)=100;
+    Rt.at<float>(2,3)=600;//d
+    Rt.at<float>(1,3)=200;//y
+    Rt.at<float>(0,3)=100; //x
 //    cv::Mat R=(cv::Mat_<float>(3,3) << 1,0,0, 0,1,0,0,0,1);
 //    cv::Mat t=(cv::Mat_<float>(3,1)<<98.7207,-120.88,1087.96);
 //    cv::Mat t=(cv::Mat_<float>(3,1)<<0,0,400);
@@ -77,10 +77,12 @@ int main(int argc, char **argv) {
     //renderer.lookAt(100,100,400,0,0,1);
     //renderer.setEyeRt(Rt.inv());
     renderer.setModelRt(Rt);
-    renderer.renderDepthOnly(depth, mask, rect);
-    renderer.renderImageOnly(image, rect);
-    cv::flip(image,image,0);
-    cv::flip(mask,mask,0);
+    renderer.renderDepthOnly(depth);
+    renderer.renderImageOnly(image);
+    renderer.getMaskFromDepth(depth,mask,rect);
+ // already write flip in functions so no need to!
+//    cv::flip(image,image,0);
+//    cv::flip(mask,mask,0);
     cv::imshow("a",image);
     cv::waitKey(0);
     cv::imshow("b",mask);

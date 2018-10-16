@@ -158,6 +158,11 @@ public:
    */
   size_t
   n_templates() const;
+  /**
+   * set the up direction and front direction
+   */
+  void
+  set_up_right_dir(cv::Vec3f updir,cv::Vec3f frontdir);
 
   /** The number of points on the sphere */
   size_t n_points_;
@@ -177,6 +182,14 @@ public:
    */
   float ele_range;//0~180 degree, 180 by default
   cv::Vec3f updir; // the up direction
+  cv::Vec3f rightdir;//the right direction
+  /**
+  * Add 18-10-16, control the longtitude range,
+  * the x direction is set to be longtitde origin
+  */
+  float longtitude_min, longtitude_max;//0~360 by default
+  cv::Vec3f frontdir;// the front direction, which determines the longtitude zero plane
+
   bool isValidRange();
 private:
   /**

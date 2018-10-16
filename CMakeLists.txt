@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.0)
-project(object_recognition_renderer)
+project(object_renderer)
 
 add_compile_options(-std=c++11)
 
@@ -21,13 +21,13 @@ include_directories(SYSTEM ${Boost_INCLUDE_DIRS}
 message("OpenCV FOUND IN" ${OpenCV_INCLUDE_DIRS})
 add_subdirectory(src)
 
-# # install the include folder
-# install(FILES ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/renderer.h
-#               ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/renderer2d.h
-#               ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/renderer3d.h
-#               ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/utils.h
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}/
-# )
+# install the include folder
+install(FILES ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/renderer.h
+	 ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/renderer2d.h
+			   ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/renderer3d.h
+			   ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/utils.h
+   DESTINATION /usr/local/include/${PROJECT_NAME}
+ )
 
 # # add docs
 # if (COMMAND ecto_sphinx)

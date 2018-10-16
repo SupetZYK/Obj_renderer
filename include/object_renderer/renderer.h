@@ -77,18 +77,20 @@ public:
   /** Renders the depth image from the current OpenGL buffers
    * @param depth_out the depth image
    * @param mask_out the mask image
-   * @param rect if not specified, being the bounding box of the rendered image
+   * @param rect_out the bounding box of the rendered image
    */
   virtual void
-  renderDepthOnly(cv::Mat &depth_out, cv::Mat &mask_out, cv::Rect &rect) const = 0;
+  renderDepthOnly(cv::Mat &depth_out, cv::Mat &mask_out, cv::Rect &rect_out) const = 0;
 
 
   /** Renders the RGB image from the current OpenGL buffers
    * @param image_out the RGB image
-   * @param rect_out the bounding box of the rendered image
+   * @param rect_in the bounding box of the rendered image,if not specified, being the whole image
    */
   virtual void
-  renderImageOnly(cv::Mat &image_out, const cv::Rect &rect_out) const = 0;
+  renderImageOnly(cv::Mat &image_out, const cv::Rect &rect_in) const = 0;
+
+
 
 protected:
   unsigned int width_, height_;

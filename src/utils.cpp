@@ -34,8 +34,8 @@
  *
  */
 
-#include <object_recognition_renderer/renderer.h>
-#include <object_recognition_renderer/utils.h>
+#include <object_renderer/renderer.h>
+#include <object_renderer/utils.h>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -54,7 +54,10 @@ RendererIterator::RendererIterator(Renderer *renderer, size_t n_points)
       radius_(radius_min_),
       absolute_radius_step(true),
       ele_range(180),
-      updir(cv::Vec3f(0,0,1.0))
+      updir(cv::Vec3f(0,0,1.0)),
+      frontdir(cv::Vec3f(1.0,0,0.0)),
+      longtitude_min(0.0),
+      longtitude_max(360.0)
 {
 }
 
@@ -268,7 +271,17 @@ RendererIterator::n_templates() const
         res = ((angle_max_ - angle_min_) / angle_step_ + 1) * n_points_ * ((radius_max_ - radius_min_) / radius_step_ + 1);
     else
       res = ((angle_max_ - angle_min_) / angle_step_ + 1) * n_points_ * (log(radius_max_/ radius_min_) / log(radius_step_ )+1);
-    return ele_range/180 * res;
+    return (longtitude_max - longtitude_min)/360 * ele_range/180 * res;
+}
+
+void RendererIterator::set_up_right_dir(cv::Vec3f udir, cv::Vec3f fdir)
+{
+  //rectify the front dir
+  this->updir=udir;
+  fdir = (udir.cross(fdir)).cross(udir);
+  fdir = fdir/=cv::norm(fdir);
+  this->frontdir = fdir;
+  this->rightdir = updir.cross(frontdir);
 }
 
 bool RendererIterator::isValidRange()
@@ -286,7 +299,16 @@ bool RendererIterator::isValidRange()
   float z = std::sin(phi) * r;
   if(std::acos(cv::Vec3f(x,y,z).dot(updir))>ele_range*CV_PI/180)
     return false;
-  return true;
+  //second check longtitude
+  //calc current longtitude
+  float tmp_x = cv::Vec3f(x,y,z).dot(frontdir);
+  float tmp_y = cv::Vec3f(x,y,z).dot(rightdir);
+  float curlong = atan2(tmp_y,tmp_x)*180/CV_PI;
+  if(curlong>=longtitude_min && curlong<= longtitude_max)
+    return true;
+  else if(curlong+360>=longtitude_min && curlong+360<=longtitude_max)
+    return true;
+  return false;
 }
 
 /**

@@ -33,7 +33,7 @@
  *
  */
 
-#include <object_recognition_renderer/renderer3d.h>
+#include <object_renderer/renderer3d.h>
 
 #include <iostream>
 #include <stdlib.h>
@@ -52,6 +52,7 @@
 #endif
 
 #include <opencv2/calib3d.hpp>
+#include <opencv2/imgproc.hpp>
 Renderer3d::Renderer3d(const std::string & mesh_path)
     :
       renderer_(new Renderer3dImpl(mesh_path, 0, 0)),
@@ -88,6 +89,9 @@ Renderer3d::set_parameters(size_t width, size_t height, double focal_length_x, d
 
   focal_length_x_ = focal_length_x;
   focal_length_y_ = focal_length_y;
+
+  px_ = px;
+  py_ = py;
 
   near_ = near;
   far_ = far;
@@ -133,17 +137,17 @@ Renderer3d::set_parameters(size_t width, size_t height, double focal_length_x, d
         glFrontFace(GL_CW);
     /**light setting**/
     glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);    /* Uses default lighting parameters */
-    GLfloat LightAmbient[]= { 0.3f, 0.3f, 0.3f, 1.0f };
-    GLfloat LightDiffuse[]= { 1.0f, 1.0f, 1.0f, 1.0f };
-    GLfloat LightPosition[]= { 0.0f, 0.0f, -100.0f, 0.0f };
-    glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
-    glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
-    glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
-    glEnable(GL_LIGHT1);
+//    glEnable(GL_LIGHT0);    /* Uses default lighting parameters */
+//    GLfloat LightAmbient[]= { 0.3f, 0.3f, 0.3f, 1.0f };
+//    GLfloat LightDiffuse[]= { 1.0f, 1.0f, 1.0f, 1.0f };
+//    GLfloat LightPosition[]= { 0.0f, 0.0f, 0.0f, 1.0f };
+//    glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
+//    glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
+//    glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
+    glEnable(GL_LIGHT0);
     /**material setting**/
 //    glLightModeli(GL_LIGHT_MODEL_AMBIENT, GL_TRUE);
-    glLightModelfv(GL_LIGHT_MODEL_AMBIENT,LightAmbient);
+//    glLightModelfv(GL_LIGHT_MODEL_AMBIENT,LightAmbient);
     glEnable(GL_COLOR_MATERIAL);
     glColorMaterial(GL_FRONT_AND_BACK,GL_AMBIENT_AND_DIFFUSE);
   }
@@ -241,9 +245,18 @@ Renderer3d::lookAt(double x, double y, double z, double upx, double upy, double 
 //    glCallList(scene_list_);
 
 //}
-
 void
-Renderer3d::setModelRt(cv::Matx44d Rt)
+Renderer3d::setModelRt(const cv::Matx33d& R, const cv::Vec3d& t)
+{
+  cv::Mat R_ = cv::Mat(R);
+  cv::Mat t_ = cv::Mat(t);
+  cv::Mat rt=cv::Mat::eye(4,4,CV_64F);
+  R_.copyTo(rt(cv::Range(0,3),cv::Range(0,3)));
+  t_.copyTo(rt(cv::Range(0,3),cv::Range(3,4)));
+  setModelRt(rt);
+}
+void
+Renderer3d::setModelRt(const cv::Matx44d& Rt)
 {
     renderer_->bind_buffers();
 
@@ -257,10 +270,10 @@ Renderer3d::setModelRt(cv::Matx44d Rt)
     cv::Matx44d rotx180=cv::Matx44d::eye();
     rotx180(1,1)=-1;
     rotx180(2,2)=-1;
-    Rt=rotx180*Rt;
+    cv::Matx44d Rt_r180 = rotx180*Rt;
 
-    Rt=Rt.t();
-    glLoadMatrixd(Rt.val);
+    Rt_r180=Rt_r180.t();
+    glLoadMatrixd(Rt_r180.val);
     //glTranslatef(0,0,-500);
     //glLoadMatrixf(m);
     float m[16];
@@ -308,6 +321,9 @@ Renderer3d::render(cv::Mat &image_out, cv::Mat &depth_out, cv::Mat &mask_out, cv
   glReadBuffer(GL_DEPTH_ATTACHMENT);
   glReadPixels(0, 0, renderer_->width_, renderer_->height_, GL_DEPTH_COMPONENT, GL_FLOAT, depth.ptr());
 
+  //flip
+  cv::flip(image,image,0);
+  cv::flip(depth,depth,0);
   float zNear = near_, zFar = far_;
   cv::Mat_<float>::iterator it = depth.begin(), end = depth.end();
   float max_allowed_z = zFar * 0.99;
@@ -338,7 +354,11 @@ Renderer3d::render(cv::Mat &image_out, cv::Mat &depth_out, cv::Mat &mask_out, cv
 
   // Rescale the depth to be in millimeters
   cv::Mat depth_scale(cv::Size(renderer_->width_, renderer_->height_), CV_16UC1);
-  depth.convertTo(depth_scale, CV_16UC1, 1e3);
+
+  //zyk changed
+  depth.convertTo(depth_scale, CV_16UC1);
+//  depth.convertTo(depth_scale, CV_16UC1, 1e3);
+
 
   // Crop the images, just so that they are smaller to write/read
   if (i_min > 0)
@@ -362,12 +382,26 @@ Renderer3d::render(cv::Mat &image_out, cv::Mat &depth_out, cv::Mat &mask_out, cv
   }
 }
 
+void Renderer3d::renderDepthOnly(cv::Mat &depth_out, cv::Mat &mask_out, cv::Rect &rect_out) const
+{
+  cv::Mat depth,mask;
+  renderDepthOnly(depth);
+  getMaskFromDepth(depth,mask,rect_out);
+  if ((rect_out.width <=0) || (rect_out.height <= 0)) {
+      depth_out = cv::Mat();
+      mask_out = cv::Mat();
+  }else {
+      depth(rect_out).copyTo(depth_out);
+      mask(rect_out).copyTo(mask_out);
+  }
+}
+
 void
-Renderer3d::renderDepthOnly(cv::Mat &depth_out, cv::Mat &mask_out, cv::Rect &rect) const
+Renderer3d::renderDepthOnly(cv::Mat &depth_out/*, cv::Mat &mask_out, cv::Rect &rect*/) const
 {
   // Create images to copy the buffers to
   cv::Mat_<float> depth(renderer_->height_, renderer_->width_);
-  cv::Mat_ < uchar > mask = cv::Mat_ < uchar > ::zeros(cv::Size(renderer_->width_, renderer_->height_));
+//  cv::Mat_ < uchar > mask = cv::Mat_ < uchar > ::zeros(cv::Size(renderer_->width_, renderer_->height_));
 
   glFlush();
 
@@ -389,52 +423,55 @@ Renderer3d::renderDepthOnly(cv::Mat &depth_out, cv::Mat &mask_out, cv::Rect &rec
       //need to undo the depth buffer mapping
       //http://olivers.posterous.com/linear-depth-in-glsl-for-real
       *it = 2 * zFar * zNear / (zFar + zNear - (zFar - zNear) * (2 * (*it) - 1));
-        float tmp=*it;
+//        float tmp=*it;
       if (*it > max_allowed_z)
         *it = 0;
-      else
-      {
-        mask(j, i) = 255;
-        // Figure the inclusive bounding box of the mask
-        if (j > j_max)
-          j_max = j;
-        else if (j < j_min)
-          j_min = j;
-        if (i > i_max)
-          i_max = i;
-        else if (i < i_min)
-          i_min = i;
-      }
+//      else
+//      {
+//        mask(j, i) = 255;
+//        // Figure the inclusive bounding box of the mask
+//        if (j > j_max)
+//          j_max = j;
+//        else if (j < j_min)
+//          j_min = j;
+//        if (i > i_max)
+//          i_max = i;
+//        else if (i < i_min)
+//          i_min = i;
+//      }
     }
 
   // Rescale the depth to be in millimeters
-  cv::Mat depth_scale(cv::Size(renderer_->width_, renderer_->height_), CV_16UC1);
-
+//  cv::Mat depth_scale(cv::Size(renderer_->width_, renderer_->height_), CV_16UC1);
+  depth_out = cv::Mat(cv::Size(renderer_->width_, renderer_->height_), CV_16UC1);
   //2017-12-1 zyk changed
   //depth.convertTo(depth_scale, CV_16UC1, 1e3);
-  depth.convertTo(depth_scale, CV_16UC1);
-
-  //2018-2-24 zyk changed: only crop image when rect is not specified
-  if(rect.width<=0||rect.height<=0){
-      // Crop the images, just so that they are smaller to write/read
-      if (i_min > 0)
-        --i_min;
-      if (i_max < renderer_->width_ - 1)
-        ++i_max;
-      if (j_min > 0)
-        --j_min;
-      if (j_max < renderer_->height_ - 1)
-        ++j_max;
-      rect = cv::Rect(i_min, j_min, i_max - i_min + 1, j_max - j_min + 1);
-  }
-  if ((rect.width <=0) || (rect.height <= 0)) {
-    depth_out = cv::Mat();
-    mask_out = cv::Mat();
-  } else {
-    depth_scale(rect).copyTo(depth_out);
-    mask(rect).copyTo(mask_out);
-  }
+  depth.convertTo(depth_out, CV_16UC1);
+  //do a final flip as the coordinate of opengl and opencv is different(upsidedown)
+  cv::flip(depth_out,depth_out,0);
+//  //2018-2-24 zyk changed: only crop image when rect is not specified
+//  if(rect.width<=0||rect.height<=0){
+//      // Crop the images, just so that they are smaller to write/read
+//      if (i_min > 0)
+//        --i_min;
+//      if (i_max < renderer_->width_ - 1)
+//        ++i_max;
+//      if (j_min > 0)
+//        --j_min;
+//      if (j_max < renderer_->height_ - 1)
+//        ++j_max;
+//      rect = cv::Rect(i_min, j_min, i_max - i_min + 1, j_max - j_min + 1);
+//  }
+///*  if ((rect.width <=0) || (rect.height <= 0)) {
+//    depth_out = cv::Mat();
+//    mask_out = cv::Mat();
+//  }*/ else {
+//    depth_scale(rect).copyTo(depth_out);
+//    mask(rect).copyTo(mask_out);
+  //  }
 }
+
+
 
 //void Renderer3d::renderDepthSimple(cv::Mat &depth_out, cv::Mat &mask_out, cv::Rect &rect) const
 //{
@@ -513,8 +550,18 @@ Renderer3d::renderDepthOnly(cv::Mat &depth_out, cv::Mat &mask_out, cv::Rect &rec
 ////        }
 //}
 
+void Renderer3d::renderImageOnly(cv::Mat &image_out, const cv::Rect &rect_in) const
+{
+  cv::Mat tmp;
+  renderImageOnly(tmp);
+  if(rect_in.width<=0||rect_in.height<=0)
+    tmp.copyTo(image_out);
+  else
+    tmp(rect_in).copyTo(image_out);
+}
+
 void
-Renderer3d::renderImageOnly(cv::Mat &image_out, const cv::Rect &rect) const
+Renderer3d::renderImageOnly(cv::Mat &image_out) const
 {
   // Create images to copy the buffers to
   cv::Mat_ < cv::Vec3b > image(renderer_->height_, renderer_->width_);
@@ -528,9 +575,27 @@ Renderer3d::renderImageOnly(cv::Mat &image_out, const cv::Rect &rect) const
   glReadBuffer(GL_COLOR_ATTACHMENT0);
   glReadPixels(0, 0, renderer_->width_, renderer_->height_, GL_BGR, GL_UNSIGNED_BYTE, image.ptr());
 
-  if ((rect.width <=0) || (rect.height <= 0)) {
-    image_out = cv::Mat();
-  } else {
-    image(rect).copyTo(image_out);
-  }
+  image.copyTo(image_out);
+  //do a final flip as the coordinate of opengl and opencv is different(upsidedown)
+  cv::flip(image_out,image_out,0);
+//  if ((rect.width <=0) || (rect.height <= 0)) {
+////    image_out = cv::Mat();
+//    image.copyTo(image_out);
+//  } else {
+//    image(rect).copyTo(image_out);
+//  }
+}
+
+void Renderer3d::getMaskFromDepth(cv::Mat &depth_in, cv::Mat &mask_out, cv::Rect &rect) const
+{
+  cv::Mat mask = depth_in>0;
+  mask.convertTo(mask_out,CV_8U);
+  cv::Mat non0p;
+  cv::findNonZero(mask,non0p);
+  rect=cv::boundingRect(non0p);
+}
+
+cv::Mat Renderer3d::getIntrinsic()
+{
+  return cv::Mat(cv::Matx33f(focal_length_x_, 0.0f, float(px_), 0.0f, focal_length_y_, float(py_), 0.0f, 0.0f, 1.0f));
 }

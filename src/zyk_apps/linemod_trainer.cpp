@@ -48,8 +48,8 @@ using namespace cv::rgbd;
 #include <opencv2/objdetect/objdetect.hpp>
 #endif
 
-#include <object_recognition_renderer/utils.h>
-#include <object_recognition_renderer/renderer3d.h>
+#include <object_renderer/utils.h>
+#include <object_renderer/renderer3d.h>
 
 #include <opencv2/highgui/highgui.hpp>
 
@@ -130,16 +130,16 @@ static void readInfo(cv::Mat& K, std::vector<cv::Mat>& rt_, const std::string& f
   }
 }
 bool visualize_=false;
-bool grayFlag=true;
+bool grayFlag=false;
 int main(int argc, char **argv) {
   // Define the display
   size_t width = 640, height = 480;
   //render parameters
-  size_t renderer_n_points=200;
+  size_t renderer_n_points=400;
   float render_near=0.1, render_far=2000.0;
-  float renderer_angle_step = 15;
-  float renderer_radius_min = 300;
-  float renderer_radius_max = 1200;
+  float renderer_angle_step = 10;
+  float renderer_radius_min = 500;
+  float renderer_radius_max = 800;
   float renderer_radius_step = 1.2;
   float renderer_focal_length_x=572.41140;
   float renderer_focal_length_y=573.57043;
@@ -181,8 +181,10 @@ int main(int argc, char **argv) {
   renderer_iterator.radius_step_ = renderer_radius_step;
   renderer_iterator.absolute_radius_step=false;
   //set ele range
-  renderer_iterator.updir=cv::Vec3f(0,0,-1);
   renderer_iterator.ele_range=90;
+  renderer_iterator.longtitude_min=10;
+  renderer_iterator.longtitude_max=170;
+  renderer_iterator.set_up_right_dir(cv::Vec3f(0.0,1.0,0.0), cv::Vec3f(1.0,0.0,0.0));
   cv::Mat image, depth, mask;
 //  cv::Matx33d R;
 //  cv::Vec3d T;
@@ -204,9 +206,7 @@ int main(int argc, char **argv) {
 //    T = renderer_iterator.T();
     cv::Matx44f rt = renderer_iterator.Rt_obj();
 //    float distance = renderer_iterator.D_obj() - float(depth.at<ushort>(depth.rows/2.0f, depth.cols/2.0f));
-    K = cv::Mat(cv::Matx33f(renderer_focal_length_x, 0.0f, float(rect.width)/2.0f, 0.0f, renderer_focal_length_y, float(rect.height)/2.0f, 0.0f, 0.0f, 1.0f));
-    if(grayFlag)
-      cv::cvtColor(image,image,CV_RGB2GRAY);
+    K = cv::Mat(cv::Matx33f(renderer_focal_length_x, 0.0f, float(width)/2.0f, 0.0f, renderer_focal_length_y, float(height)/2.0f, 0.0f, 0.0f, 1.0f));
     std::vector<cv::Mat> sources(2);
     sources[0] = image;
     sources[1] = depth;

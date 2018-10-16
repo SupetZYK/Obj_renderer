@@ -6,8 +6,8 @@
 #include <string>
 #include <vector>
 
-#include <object_recognition_renderer/utils.h>
-#include <object_recognition_renderer/renderer3d.h>
+#include <object_renderer/utils.h>
+#include <object_renderer/renderer3d.h>
 
 #include <opencv2/highgui/highgui.hpp>
 
@@ -19,9 +19,9 @@ int main(int argc, char **argv) {
   //render parameters
   size_t renderer_n_points=200;
   float render_near=0.1, render_far=2000.0;
-  float renderer_angle_step = 20;
-  float renderer_radius_min = 500;
-  float renderer_radius_max = 500;
+  float renderer_angle_step = 10;
+  float renderer_radius_min = 400;
+  float renderer_radius_max = 400;
   float renderer_radius_step = 1.1;
   float renderer_focal_length_x=572.41140;
   float renderer_focal_length_y=573.57043;
@@ -63,8 +63,12 @@ int main(int argc, char **argv) {
   renderer_iterator.radius_step_ = renderer_radius_step;
   renderer_iterator.absolute_radius_step=false;
   //set ele range
-  renderer_iterator.updir=cv::Vec3f(0,0,-1);
+//  renderer_iterator.updir=cv::Vec3f(0.0,1.0,0.0);
+//  renderer_iterator.frontdir=cv::Vec3f(1.0,0.0,0.0);
   renderer_iterator.ele_range=90;
+  renderer_iterator.longtitude_min=0;
+  renderer_iterator.longtitude_max=180;
+  renderer_iterator.set_up_right_dir(cv::Vec3f(0.0,1.0,0.0), cv::Vec3f(1.0,0.0,0.0));
   cv::Mat image, depth, mask, image2,depth2,mask2;
 
 //  cv::Matx33d R;
@@ -85,8 +89,8 @@ int main(int argc, char **argv) {
 
     cv::Matx44d rt = renderer_iterator.Rt_obj();
     cv::Rect rect2;
-    rect2.width=width;
-    rect2.height=height;
+//    rect2.width=width;
+//    rect2.height=height;
 
     renderer.setModelRt(cv::Mat(rt));
     renderer.renderDepthOnly(depth2, mask2, rect2);
@@ -111,7 +115,7 @@ int main(int argc, char **argv) {
         cv::imshow("mask",mask);
         cv::imshow("reImage",image2);
         cv::imshow("reMask",mask2);
-        cv::waitKey(1);
+        cv::waitKey(0);
       }
     }
   //#endif

@@ -1,8 +1,8 @@
 /*
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2012, Willow Garage, Inc.
  *  Copyright (c) 2013, Vincent Rabaud
+ *  Copyright (c) 2013, Aldebaran Robotics
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -34,52 +34,35 @@
  *
  */
 
-#ifndef ORK_RENDERER_RENDERER3D_H_
-#define ORK_RENDERER_RENDERER3D_H_
+#ifndef ORK_RENDERER_RENDERER2D_H_
+#define ORK_RENDERER_RENDERER2D_H_
 
 #include <string>
-
-#include <opencv2/core/core.hpp>
-
-#include <GL/gl.h>
 
 #include "renderer.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-class Model;
-class aiLogStream;
-
-class Renderer3dImpl;
-
-/** Class that displays a scene in a Frame Buffer Object
- * Inspired by http://www.songho.ca/opengl/gl_fbo.html
+/** Class that renders a planar scene under different view points
+ * This is an equivalent to the Render class but for planar patterns
  */
-class Renderer3d : public Renderer
+class Renderer2d : public Renderer
 {
 public:
   /**
-   * @param file_path the path of the mesh file
+   * @param file_path the path of the image file
+   * @param physical_width the size of the width in real life (in meters)
    */
-  Renderer3d(const std::string & file_path);
+  Renderer2d(const std::string & file_path, float physical_width);
 
-  virtual
-  ~Renderer3d();
-  /** Set intrinsic parameters
-   * @param width the image width
-   * @param height the image height
-   * @param focal_length_x the generalized focal length
-   * @param focal_length_y the generalized focal length
-   * @param px the principle point x component (pixel)
-   * @param py the principle point y component (pixel)
-   * @param near
-   * @param far
-   */
+  ~Renderer2d();
+
   void
-  set_parameters(size_t width, size_t height, double focal_length_x, double focal_length_y, double px, double py, double near, double far);
+  set_parameters(size_t width, size_t height, double focal_length_x, double focal_length_y);
 
-  /** Similar to the gluLookAt function
-   * @param x the x position of the eye pointt
+  /** Similar to the gluLookAt function. The image is supposed to have X going right, Y going down and Z
+   * going away from the camera
+   * @param x the x position of the eye point
    * @param y the y position of the eye point
    * @param z the z position of the eye point
    * @param upx the x direction of the up vector
@@ -87,21 +70,12 @@ public:
    * @param upz the z direction of the up vector
    */
   void
-  lookAt(GLdouble x, GLdouble y, GLdouble z, GLdouble upx, GLdouble upy, GLdouble upz);
+  lookAt(double x, double y, double z, double upx, double upy, double upz);
 
-//  /** Direct set the pose of eye coordinate(camera coordinate) relative to the world coordinate 17-11-20 by zyk
-//   */
-//  void
-//  setEyeRt(cv::Matx44d Rt);
-  /** Direct set the pose of model coordinate relative to the camera coordinate 17-11-20 by zyk(standard opencv camera coordinate)
-   */
-  void
-  setModelRt(cv::Matx44d Rt);
   /** Renders the content of the current OpenGL buffers to images
    * @param image_out the RGB image
    * @param depth_out the depth image
    * @param mask_out the mask image
-   * @param rect_out the bounding box of the rendered image
    */
   void
   render(cv::Mat &image_out, cv::Mat &depth_out, cv::Mat &mask_out, cv::Rect &rect_out) const;
@@ -109,38 +83,31 @@ public:
   /** Renders the depth image from the current OpenGL buffers
    * @param depth_out the depth image
    * @param mask_out the mask image
-   * @param rect if not specified, being the bounding box of the rendered image.
+   * @param rect_out the bounding box of the rendered image
    */
   void
-  renderDepthOnly(cv::Mat &depth_out, cv::Mat &mask_out, cv::Rect &rect) const;
-//  /** Renders the depth image from the current OpenGL buffers, the difference with renderDepthOnly is that this will not find the bounding rect.
-//   * @param depth_out the depth image
-//   * @param mask_out the mask image
-//   * @param rect_out the bounding box of the rendered image
-//   */
-//  void
-//  renderDepthSimple(cv::Mat &depth_out, cv::Mat &mask_out, cv::Rect &rect_in) const;
+  renderDepthOnly(cv::Mat &depth_out, cv::Mat &mask_out, cv::Rect &rect_out) const;
 
   /** Renders the RGB image from the current OpenGL buffers
    * @param image_out the RGB image
-   * @param rect the bounding box input for crop image
+   * @param rect_in the bounding box of the rendered image, if not specified, being the whole image
    */
   void
-  renderImageOnly(cv::Mat &image_out, const cv::Rect &rect) const;
-
-  const Model* getModel() const {return model_;}
+  renderImageOnly(cv::Mat &image_out, const cv::Rect &rect_in) const;
 protected:
-  double focal_length_x_, focal_length_y_, near_, far_;
-  float angle_;
+  /** Path of the mesh */
+  std::string mesh_path_;
 
-  Model* model_;
-  GLuint scene_list_;
+  unsigned int width_, height_;
+  double focal_length_x_, focal_length_y_;
+  float physical_width_;
 
-  /** stream for storing the logs from Assimp */
-  aiLogStream* ai_stream_;
-
-  /** Private implementation of the renderer (GLUT or OSMesa) */
-  Renderer3dImpl* renderer_;
+  cv::Mat_<cv::Vec3b> img_ori_;
+  cv::Mat_<uchar> mask_ori_;
+  cv::Mat_<uchar> mask_;
+  cv::Matx33f K_;
+  cv::Matx33f R_;
+  cv::Vec3f T_;
 };
 
-#endif /* ORK_RENDERER_RENDERER3D_H_ */
+#endif /* ORK_RENDERER_RENDERER2D_H_ */

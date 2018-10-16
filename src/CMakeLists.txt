@@ -7,11 +7,11 @@ find_package(ASSIMP REQUIRED)
 # endif()
 
 # create the 2d rendering library
-add_library(${PROJECT_NAME}_2d renderer2d.cpp)
+add_library(${PROJECT_NAME}_2d SHARED renderer2d.cpp)
 target_link_libraries(${PROJECT_NAME}_2d ${OpenCV_LIBRARIES})
-# install(TARGETS ${PROJECT_NAME}_2d
-#           DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-# )
+install(TARGETS ${PROJECT_NAME}_2d
+	 DESTINATION /usr/local/lib/
+)
 
 # create the 3d rendering library
 set(SOURCES model.cpp renderer3d.cpp utils.cpp)
@@ -37,15 +37,15 @@ else()
   set(EXTRA_LIBRARIES OSMesa GLU)
 endif()
 
-add_library(${PROJECT_NAME}_3d ${SOURCES} ${EXTRA_SOURCES})
+add_library(${PROJECT_NAME}_3d SHARED ${SOURCES} ${EXTRA_SOURCES})
 target_link_libraries(${PROJECT_NAME}_3d ${EXTRA_LIBRARIES}
                                          ${OpenCV_LIBRARIES}
                                          ${ASSIMP_LIBRARIES}
                                          freeimage)
 
-# install(TARGETS ${PROJECT_NAME}_3d
-#         DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-# )
+ install(TARGETS ${PROJECT_NAME}_3d
+	 DESTINATION /usr/local/lib/
+ )
 
 # add an executable to render views to a file
 # ADD_EXECUTABLE(view_generator main.cpp)

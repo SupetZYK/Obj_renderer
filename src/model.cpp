@@ -214,7 +214,6 @@ Model::recursive_render(const struct aiScene *sc, const aiNode* nd) const
       glBindTexture(GL_TEXTURE_2D, texturesAndPaths.at(std::make_pair(nd, n)).hTexture);
     if(material_cnt>0)
         apply_material(sc->mMaterials[mesh->mMaterialIndex]);
-
     if (mesh->mNormals == NULL)
       glDisable (GL_LIGHTING);
     else
@@ -247,15 +246,31 @@ Model::recursive_render(const struct aiScene *sc, const aiNode* nd) const
       }
 
       glBegin(face_mode);
+      if(face_mode == GL_TRIANGLES && mesh->mNormals != NULL)
+      {
+        // USE FLAT SHADED
+        aiVector3D & p1 = mesh->mVertices[face->mIndices[0]];
+        aiVector3D & p2 = mesh->mVertices[face->mIndices[1]];
+        aiVector3D & p3 = mesh->mVertices[face->mIndices[2]];
+        float x1=p3[0]-p1[0];
+        float y1=p3[1]-p1[1];
+        float z1=p3[2]-p1[2];
+        float x2=p2[0]-p1[0];
+        float y2=p2[1]-p1[1];
+        float z2=p2[2]-p1[2];
 
+        aiVector3D normal(y1*z2-y2*z1,x2*z1-x1*z2,x1*y2-x2*y1);
+        normal= -normal.Normalize();
+        glNormal3fv(&normal.x);
+      }
       for (i = 0; i < face->mNumIndices; i++)
       {
         int index = face->mIndices[i];
         if (mesh->mColors[0] != NULL)
           Color4f(&mesh->mColors[0][index]);
-        else
-          glColor3f((mesh->mNormals[index].x+1)/2.0,(mesh->mNormals[index].y+1)/2.0,(mesh->mNormals[index].z+1)/2.0);
-        if (mesh->mNormals != NULL)
+//        else
+//          glColor3f((mesh->mNormals[index].x+1)/2.0,(mesh->mNormals[index].y+1)/2.0,(mesh->mNormals[index].z+1)/2.0);
+        if (face_mode==GL_POLYGON && mesh->mNormals != NULL)
           glNormal3fv(&mesh->mNormals[index].x);
         if (mesh->HasTextureCoords(0))
           glTexCoord2f(mesh->mTextureCoords[0][index].x, mesh->mTextureCoords[0][index].y);
